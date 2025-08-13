@@ -1,3 +1,3 @@
-echo 'FROM nginx:alpine
+FROM nginx:alpine
 COPY . /usr/share/nginx/html
-EXPOSE 80' > Dockerfile
+EXPOSE 80
