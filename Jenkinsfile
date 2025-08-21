@@ -2,33 +2,42 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDS = credentials('dockerhub-creds')
-        DOCKER_IMAGE = 'roshanyadav18/my-docker-app'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+        IMAGE_NAME = "roshanyadav18/my-docker-app"
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Code') {
             steps {
-                git branch: 'main', 
-                url: 'https://github.com/Roshanyadav18/my-docker-app.git'
+                git branch: 'main', url: 'git@github.com:Roshanyadav18/my-docker-app.git'
             }
         }
 
-        stage('Build') {
+        stage('Run Tests') {
             steps {
-                script {
-                    docker.build("${DOCKER_IMAGE}")
-                }
+                echo "Running tests..."
+                // Example test: check if index.html file exists
+                sh 'test -f index.html'
             }
         }
 
-        stage('Push') {
+        stage('Build Docker Image') {
             steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-creds') {
-                        docker.image("${DOCKER_IMAGE}").push('latest')
-                    }
-                }
+                sh "docker build -t $IMAGE_NAME:${BUILD_NUMBER} ."
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
+                sh "docker push $IMAGE_NAME:${BUILD_NUMBER}"
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                sh "docker rm -f my-docker-app || true"
+                sh "docker run -d --name my-docker-app -p 9090:80 $IMAGE_NAME:${BUILD_NUMBER}"
             }
         }
     }
